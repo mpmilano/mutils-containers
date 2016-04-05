@@ -9,23 +9,11 @@ namespace mutils {
 	struct HeteroMap {
 	private:
 		
-		using type_id = int;
+
 		using count = std::function<int (Key)>;
 		using destructor = std::function<void ()>;
 		template<typename T>
 		using submap = std::map<Key, std::unique_ptr<std::decay_t<T> > >;
-		
-		static type_id type_id_counter(bool increment){
-			static type_id counter = 0;
-			if (increment) ++counter;
-			return counter;
-		}
-		
-		template<typename T>
-		static type_id get_type_id(){
-			static auto id_for_T = type_id_counter(true);
-			return id_for_T;
-		}
 		
 		std::map<type_id, std::tuple<void*, count, destructor,std::string> > sub_maps;
 		std::map<Key,type_id> member_set; //for membership queries, when we do not know the type
