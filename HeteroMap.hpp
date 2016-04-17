@@ -20,6 +20,7 @@ namespace mutils {
 		
 		template<typename T>
 		submap<std::decay_t<T> >* get_submap(){
+			static const auto tname = "this has been disabled"; //type_name_fast<std::decay_t<T> >();
 			auto tid = get_type_id<std::decay_t<T> >();
 			if (sub_maps.count(tid) == 0){
 				submap<std::decay_t<T> >* newmap = new submap<std::decay_t<T> >{};
@@ -29,7 +30,7 @@ namespace mutils {
 						newmap,
 							[newmap](Key k){return newmap->count(k);},
 							[newmap](){delete newmap;},
-								type_name<std::decay_t<T> >()
+								tname
 								});
 			}
 			return (submap<std::decay_t<T> >*) std::get<0>(sub_maps[tid]);
