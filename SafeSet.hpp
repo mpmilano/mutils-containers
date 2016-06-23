@@ -13,6 +13,7 @@ namespace mutils{
 	struct MonotoneSafeSet {
 		std::list<T> impl;
 		std::mutex m;
+		std::condition_variable cv;
 		using lock = std::unique_lock<std::mutex>;
 		template<typename... Args>
 		T& emplace(Args && ... args){
@@ -30,8 +31,11 @@ namespace mutils{
 		}
 
 		void add(T t){
-			lock l{m}; discard(l);
-			impl.push_back(t);
+			{
+				lock l{m}; discard(l);
+				impl.push_back(t);
+			}
+			cv.notify_all();
 		}
 
 		std::list<T> iterable_copy(){
@@ -52,11 +56,17 @@ namespace mutils{
 	template<typename T>
 	struct SafeSet : MonotoneSafeSet<T>{
 
-		struct EmptyException{};
+		struct EmptyException : public std::exception{
+			const char* what() noexcept {
+				return "empty safe set encountered";
+			}
+		};
 		using lock = typename MonotoneSafeSet<T>::lock;
 		T pop(){
 			lock l{this->m}; discard(l);
-			if (this->impl.size() == 0) throw EmptyException{};
+			if (this->impl.size() == 0) {
+				this->cv.wait(l,[&](){return this->impl.size() > 0;});
+			}
 			auto r = this->impl.front();
 			this->impl.pop_front();
 			return r;
