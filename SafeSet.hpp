@@ -64,14 +64,35 @@ namespace mutils{
 			}
 		};
 		using lock = typename MonotoneSafeSet<T>::lock;
+
+	private:
+		auto pop_common(){
+			auto r = std::move(this->impl.front());
+			this->impl.pop_front();
+			return r;
+		}
+	public:
+		
 		T pop(){
 			lock l{this->m}; discard(l);
 			if (this->impl.size() == 0) {
 				this->cv.wait(l,[&](){return this->impl.size() > 0;});
 			}
-			auto r = this->impl.front();
-			this->impl.pop_front();
-			return r;
+			return pop_common();
+		}
+
+		template<typename... Args>
+		T emplace_or_pop(Args && ... args){
+			lock l{this->m}; discard(l);
+			if (this->impl.size() == 0) this->impl.emplace_back(std::forward<Args>(args)...);
+			return pop_common();
+		}
+
+		template<typename... Args>
+		T build_or_pop(const std::function<Args ()>& ... args){
+			lock l{this->m}; discard(l);
+			if (this->impl.size() == 0) this->impl.emplace_back(args()...);
+			return pop_common();
 		}
 	};
 
