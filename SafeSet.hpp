@@ -56,7 +56,7 @@ namespace mutils{
 	};
 
 	template<typename T>
-	struct SafeSet : MonotoneSafeSet<T>{
+	struct InterimSafeSet : MonotoneSafeSet<T>{
 
 		struct EmptyException : public std::exception{
 			const char* what() noexcept {
@@ -65,21 +65,13 @@ namespace mutils{
 		};
 		using lock = typename MonotoneSafeSet<T>::lock;
 
-	private:
+	protected:
 		auto pop_common(){
 			auto r = std::move(this->impl.front());
 			this->impl.pop_front();
 			return r;
 		}
 	public:
-		
-		T pop(){
-			lock l{this->m}; discard(l);
-			if (this->impl.size() == 0) {
-				this->cv.wait(l,[&](){return this->impl.size() > 0;});
-			}
-			return pop_common();
-		}
 
 		template<typename... Args>
 		T emplace_or_pop(Args && ... args){
@@ -97,7 +89,19 @@ namespace mutils{
 	};
 
 	template<typename T>
-	struct SafeSet<T*> : MonotoneSafeSet<T*>{
+	struct SafeSet : InterimSafeSet<T> {
+		using lock = typename MonotoneSafeSet<T>::lock;
+		T pop(){
+			lock l{this->m}; discard(l);
+			if (this->impl.size() == 0) {
+				this->cv.wait(l,[&](){return this->impl.size() > 0;});
+			}
+			return this->pop_common();
+		}
+	};
+
+	template<typename T>
+	struct SafeSet<T*> : InterimSafeSet<T*>{
 		using lock = typename MonotoneSafeSet<T>::lock;
 		T* pop(){
 			lock l{this->m}; discard(l);
