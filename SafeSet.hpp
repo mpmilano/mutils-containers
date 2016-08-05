@@ -1,6 +1,5 @@
 #pragma once
 #include <set>
-#include <list>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -13,7 +12,7 @@ namespace mutils{
 
 	template<typename T>
 	struct MonotoneSafeSet {
-		std::list<T> impl;
+		std::set<T> impl;
 		std::mutex m;
 		std::condition_variable cv;
 		using lock = std::unique_lock<std::mutex>;
@@ -35,16 +34,16 @@ namespace mutils{
 		void add(T t){
 			{
 				lock l{m}; discard(l);
-				impl.push_back(t);
+				impl.insert(t);
 			}
 			cv.notify_all();
 		}
 
-		std::list<T> iterable_copy(){
+		std::set<T> iterable_copy(){
 			return impl;
 		}
 
-		std::list<T>& iterable_reference(){
+		std::set<T>& iterable_reference(){
 			return impl;
 		}
 
@@ -67,8 +66,8 @@ namespace mutils{
 
 	protected:
 		auto pop_common(){
-			auto r = std::move(this->impl.front());
-			this->impl.pop_front();
+			auto r = std::move(*this->impl.begin());
+			this->impl.erase(this->impl.begin());
 			return r;
 		}
 	public:
@@ -76,14 +75,14 @@ namespace mutils{
 		template<typename... Args>
 		T emplace_or_pop(Args && ... args){
 			lock l{this->m}; discard(l);
-			if (this->impl.size() == 0) this->impl.emplace_back(std::forward<Args>(args)...);
+			if (this->impl.size() == 0) this->impl.emplace(std::forward<Args>(args)...);
 			return pop_common();
 		}
 
 		template<typename... Args>
 		T build_or_pop(const std::function<Args ()>& ... args){
 			lock l{this->m}; discard(l);
-			if (this->impl.size() == 0) this->impl.emplace_back(args()...);
+			if (this->impl.size() == 0) this->impl.emplace(args()...);
 			return pop_common();
 		}
 	};
