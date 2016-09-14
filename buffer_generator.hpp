@@ -1,4 +1,7 @@
 #pragma once
+#include <array>
+#include <cassert>
+#include "string.h"
 
 namespace mutils{
 
@@ -25,21 +28,24 @@ namespace mutils{
 		struct pointer{
 		private:
 			allocated_chunk *parent;
-			char* payload;
-			char* payload_end{payload};
-			bool split{false};
-
-			pointer(allocated_chunk *parent, char* payload);
-			pointer(const pointer&) = delete;
-			pointer(pointer&& o);
+			BufferGenerator &gen;
 		public:
+			char* payload;
+		private:
+			char* payload_end{payload};
+			bool has_split{false};
+
+			pointer(BufferGenerator& gen, allocated_chunk *parent, char* payload);
+			pointer(const pointer&) = delete;
+		public:
+			pointer(pointer&& o);
 			~pointer();
 
 			/**
 			   Extend the size this pointer referrs to, creating a new
 			   underlying buffer if necessary.  Basically realloc()
 			 */
-			pointer grow(int offset);
+			pointer grow(std::size_t offset);
 			
 			std::size_t size() const;
 
@@ -51,7 +57,8 @@ namespace mutils{
 			/**
 			   split this allocated region in two at point offset
 			 */
-			pointer split(int offset);
+			pointer split(std::size_t offset);
+			friend class BufferGenerator;
 		};
 
 		/**
@@ -65,67 +72,70 @@ namespace mutils{
 	//implementations follow
 	
 	template<std::size_t buf_size>
-	BufferGenerator::pointer::pointer(allocated_chunk *parent, char* payload)
-		:parent(parent),payload(payload)
+	BufferGenerator<buf_size>::pointer::pointer(BufferGenerator& gen, allocated_chunk *parent, char* payload)
+		:parent(parent),gen(gen),payload(payload)
 	{++parent->use_count;}
 	
 	template<std::size_t buf_size>
-	BufferGenerator::pointer::pointer(pointer&& o)
+	BufferGenerator<buf_size>::pointer::pointer(pointer&& o)
 		:parent(o.parent),
-		 payload(o.payload){
+		 gen(o.gen),
+		 payload(o.payload),
+		 payload_end(o.payload_end),
+		 has_split(o.has_split){
 		o.parent = nullptr;
 		o.payload = nullptr;
 	}
 	
 	template<std::size_t buf_size>
-	BufferGenerator::pointer::~pointer(){
-		if (parent && --parent->use_count){
-			delete &parent;
+	BufferGenerator<buf_size>::pointer::~pointer(){
+		if (parent && (--parent->use_count == 0)){
+			delete parent;
 		}
 	}
 	
 	template<std::size_t buf_size>
-	BufferGenerator::pointer BufferGenerator::pointer::grow(int offset){
-		assert(offset + size() < buf_size);
-		if (!split &&
+	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::grow(std::size_t offset){
+		assert(offset + size() <= buf_size);
+		if (!has_split &&
 			//there's enough space left in this buffer
-			offset < (parent->data.data() + buf_size - payload_end)){
+			(long)offset <= (parent->data.data() + buf_size - payload_end)){
 			payload_end += offset;
 			return std::move(*this);
 		}
 		else {
-			auto ret = allocate();
+			auto ret = gen.allocate();
 			memcpy(ret.payload,payload,size());
 			ret.payload_end = ret.payload + size();
 			return ret;
 		}
 	}
 	template<std::size_t buf_size>
-	std::size_t BufferGenerator::pointer::size() const {
+	std::size_t BufferGenerator<buf_size>::pointer::size() const {
 		return payload_end - payload;
 	}
 
 	template<std::size_t buf_size>
-	BufferGenerator::pointer BufferGenerator::pointer::split(){
-		split = true;
-		return pointer{parent,payload_end};
+	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(){
+		has_split = true;
+		return pointer{gen,parent,payload_end};
 	}
 
 	template<std::size_t buf_size>
-	BufferGenerator::pointer BufferGenerator::pointer::split(int offset){
+	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
 		assert(offset < size());
-		auto ret = pointer{parent,payload+offset};
+		auto ret = pointer{gen,parent,payload+offset};
 		ret.payload_end = payload_end;
-		ret.split = split;
+		ret.has_split = has_split;
 		payload_end = payload + offset;
-		split = true;
+		has_split = true;
 		return ret;
 	}
 
 	template<std::size_t buf_size>
-	BufferGenerator::pointer BufferGenerator::allocate(){
+	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::allocate(){
 		auto* new_chunk = new allocated_chunk();
-		return pointer{*new_chunk,new_chunk->data.data()};
+		return pointer{*this,new_chunk,new_chunk->data.data()};
 	}
 
 }
