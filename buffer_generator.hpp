@@ -28,31 +28,34 @@ namespace mutils{
 		struct pointer{
 		private:
 			allocated_chunk *parent;
-			BufferGenerator &gen;
 		public:
 			char* payload;
 		private:
-			char* payload_end{payload};
+			char* payload_end;
 			bool has_split{false};
 
-			pointer(BufferGenerator& gen, allocated_chunk *parent, char* payload);
+			pointer(allocated_chunk *parent, char* payload, char* payload_end);
 			pointer(const pointer&) = delete;
 		public:
 			pointer(pointer&& o);
+			pointer& operator=(pointer&& o);
 			~pointer();
 
-			/**
-			   Extend the size this pointer referrs to, creating a new
-			   underlying buffer if necessary.  Basically realloc()
-			 */
-			pointer grow(std::size_t offset);
+
+			pointer grow();
+			
+			pointer grow_to_fit(std::size_t new_size){
+				if (size() < new_size) {
+					auto ret = grow();
+					assert(!payload);
+					assert(ret.size() >= new_size);
+					return ret;
+				}
+				else return std::move(*this);
+			}
 			
 			std::size_t size() const;
 
-			/**
-			   create a new pointer pointing to the end of this allocated region.
-			 */
-			pointer split();
 
 			/**
 			   split this allocated region in two at point offset
@@ -65,26 +68,39 @@ namespace mutils{
 		   Return a pointer in which no space is used, 
 		   which is backed by a newly-allocated buffer
 		 */
-		pointer allocate();
+		static pointer allocate();
 		
 	};
 	
 	//implementations follow
 	
 	template<std::size_t buf_size>
-	BufferGenerator<buf_size>::pointer::pointer(BufferGenerator& gen, allocated_chunk *parent, char* payload)
-		:parent(parent),gen(gen),payload(payload)
+	BufferGenerator<buf_size>::pointer::pointer(allocated_chunk *parent, char* payload, char* payload_end)
+		:parent(parent),payload(payload),payload_end(payload_end)
 	{++parent->use_count;}
 	
 	template<std::size_t buf_size>
 	BufferGenerator<buf_size>::pointer::pointer(pointer&& o)
 		:parent(o.parent),
-		 gen(o.gen),
 		 payload(o.payload),
 		 payload_end(o.payload_end),
 		 has_split(o.has_split){
 		o.parent = nullptr;
 		o.payload = nullptr;
+	}
+
+	template<std::size_t buf_size>
+	typename BufferGenerator<buf_size>::pointer&
+	BufferGenerator<buf_size>::pointer::operator=(pointer&& o)
+	{
+		parent = o.parent;
+		o.parent = nullptr;
+		payload = o.payload;
+		o.payload = nullptr;
+		payload_end = o.payload_end;
+		o.payload_end = nullptr;
+		has_split = o.has_split;
+		return *this;
 	}
 	
 	template<std::size_t buf_size>
@@ -95,47 +111,37 @@ namespace mutils{
 	}
 	
 	template<std::size_t buf_size>
-	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::grow(std::size_t offset){
-		assert(offset + size() <= buf_size);
-		if (!has_split &&
-			//there's enough space left in this buffer
-			(long)offset <= (parent->data.data() + buf_size - payload_end)){
-			payload_end += offset;
-			return std::move(*this);
-		}
-		else {
-			auto ret = gen.allocate();
-			memcpy(ret.payload,payload,size());
-			ret.payload_end = ret.payload + size();
-			return ret;
-		}
+	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::grow(){
+		auto ret = allocate();
+		memcpy(ret.payload,payload,size());
+		ret.payload_end = ret.payload + buf_size;
+		pointer{std::move(*this)}; // to invalidate this pointer
+		assert(!payload);
+		return ret;
 	}
 	template<std::size_t buf_size>
 	std::size_t BufferGenerator<buf_size>::pointer::size() const {
+		assert(payload_end - payload <= (int)buf_size);
+		assert(payload_end);
+		assert(payload);
 		return payload_end - payload;
-	}
-
-	template<std::size_t buf_size>
-	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(){
-		has_split = true;
-		return pointer{gen,parent,payload_end};
 	}
 
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
 		assert(offset < size());
-		auto ret = pointer{gen,parent,payload+offset};
-		ret.payload_end = payload_end;
+		auto ret = pointer{parent,payload+offset,payload_end};
 		ret.has_split = has_split;
 		payload_end = payload + offset;
 		has_split = true;
+		size(); //for the assert
 		return ret;
 	}
 
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::allocate(){
 		auto* new_chunk = new allocated_chunk();
-		return pointer{*this,new_chunk,new_chunk->data.data()};
+		return pointer{new_chunk,new_chunk->data.data(),new_chunk->data.data() + buf_size};
 	}
 
 }
