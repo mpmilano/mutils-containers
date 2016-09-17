@@ -12,13 +12,16 @@ namespace mutils{
 	class BufferGenerator{
 	public:
 
+		using lock = std::unique_lock<std::mutex>;
+
 		/**
 		   the backing struct, and a reference count.  pointers have 
 		   many references to these.
 		 */
 		struct allocated_chunk{
+			std::mutex chunk_lock;
 			std::array<char,buf_size> data;
-			std::size_t use_count{0};
+			std::atomic<std::size_t> use_count{0};
 		};
 		
 		/**
@@ -77,7 +80,9 @@ namespace mutils{
 	template<std::size_t buf_size>
 	BufferGenerator<buf_size>::pointer::pointer(allocated_chunk *parent, char* payload, char* payload_end)
 		:parent(parent),payload(payload),payload_end(payload_end)
-	{++parent->use_count;}
+	{
+		++parent->use_count;
+	}
 	
 	template<std::size_t buf_size>
 	BufferGenerator<buf_size>::pointer::pointer(pointer&& o)
@@ -129,12 +134,13 @@ namespace mutils{
 
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
+		assert(payload_end - payload <= (int)buf_size);
 		assert(offset < size());
 		auto ret = pointer{parent,payload+offset,payload_end};
 		ret.has_split = has_split;
 		payload_end = payload + offset;
 		has_split = true;
-		size(); //for the assert
+		assert(payload_end - payload <= (int)buf_size);
 		return ret;
 	}
 
