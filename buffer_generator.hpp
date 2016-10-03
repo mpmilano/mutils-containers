@@ -30,23 +30,24 @@ namespace mutils{
 		 */
 		struct pointer{
 		private:
-			allocated_chunk *parent;
+			allocated_chunk *backing_buffer;
 		public:
+			//invariant: payload is within the allocated chunk
 			char* payload;
 		private:
 			char* payload_end;
-			bool has_split{false};
 
-			pointer(allocated_chunk *parent, char* payload, char* payload_end);
+			pointer(allocated_chunk *backing_buffer, char* payload, char* payload_end);
 			pointer(const pointer&) = delete;
 		public:
 			pointer(pointer&& o);
 			pointer& operator=(pointer&& o);
 			~pointer();
 
-
+			//This is a destructive operation!
 			pointer grow();
-			
+
+			//This is a destructive operation!
 			pointer grow_to_fit(std::size_t new_size){
 				if (size() < new_size) {
 					auto ret = grow();
@@ -56,7 +57,8 @@ namespace mutils{
 				}
 				else return std::move(*this);
 			}
-			
+
+			//payload_end - payload
 			std::size_t size() const;
 
 
@@ -78,40 +80,49 @@ namespace mutils{
 	//implementations follow
 	
 	template<std::size_t buf_size>
-	BufferGenerator<buf_size>::pointer::pointer(allocated_chunk *parent, char* payload, char* payload_end)
-		:parent(parent),payload(payload),payload_end(payload_end)
+	BufferGenerator<buf_size>::pointer::pointer(allocated_chunk *backing_buffer, char* payload, char* payload_end)
+		:backing_buffer(backing_buffer),payload(payload),payload_end(payload_end)
 	{
-		++parent->use_count;
+		++backing_buffer->use_count;
 	}
 	
 	template<std::size_t buf_size>
 	BufferGenerator<buf_size>::pointer::pointer(pointer&& o)
-		:parent(o.parent),
+		:backing_buffer(o.backing_buffer),
 		 payload(o.payload),
-		 payload_end(o.payload_end),
-		 has_split(o.has_split){
-		o.parent = nullptr;
+		 payload_end(o.payload_end)
+	{
+		o.backing_buffer = nullptr;
 		o.payload = nullptr;
+		o.payload_end = nullptr;
 	}
 
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer&
 	BufferGenerator<buf_size>::pointer::operator=(pointer&& o)
 	{
-		parent = o.parent;
-		o.parent = nullptr;
+		backing_buffer = o.backing_buffer;
+		o.backing_buffer = nullptr;
 		payload = o.payload;
 		o.payload = nullptr;
 		payload_end = o.payload_end;
 		o.payload_end = nullptr;
-		has_split = o.has_split;
 		return *this;
 	}
 	
 	template<std::size_t buf_size>
 	BufferGenerator<buf_size>::pointer::~pointer(){
-		if (parent && (--parent->use_count == 0)){
-			delete parent;
+		if (backing_buffer){
+			//We don't need to acquire a lock;
+			//the only way to increase the use count
+			//is via a call to split(), which can only
+			//be called on a valid object; that valid object
+			//will keep the use_count at at least 1.
+			//so if reach 0, we're deleting the last pointer
+			//off of which we could call split.
+			if (--backing_buffer->use_count == 0){
+				delete backing_buffer;
+			}
 		}
 	}
 	
@@ -124,6 +135,7 @@ namespace mutils{
 		assert(!payload);
 		return ret;
 	}
+	
 	template<std::size_t buf_size>
 	std::size_t BufferGenerator<buf_size>::pointer::size() const {
 		assert(payload_end - payload <= (int)buf_size);
@@ -135,11 +147,13 @@ namespace mutils{
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
 		assert(payload_end - payload <= (int)buf_size);
-		assert(offset < size());
-		auto ret = pointer{parent,payload+offset,payload_end};
-		ret.has_split = has_split;
+		if (offset > size()){
+			std::cout << offset << std::endl;
+			std::cout << size() << std::endl;
+		}
+		assert(offset <= size());
+		auto ret = pointer{backing_buffer,payload+offset,payload_end};
 		payload_end = payload + offset;
-		has_split = true;
 		assert(payload_end - payload <= (int)buf_size);
 		return ret;
 	}
