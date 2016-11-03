@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cassert>
+#include <atomic>
 #include "string.h"
 
 namespace mutils{
