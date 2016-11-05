@@ -20,6 +20,12 @@ namespace mutils{
 		auto *ret = at_p(id);
 		if (ret) return *ret;
 		assert(false && "error: element not found");
+		struct element_not_found_error : public std::exception {
+			const char* what() const noexcept {
+				return "Element not found in CompactMap";
+			};
+		};
+		throw element_not_found_error{};
 	}
 
 	template<typename K, typename V>

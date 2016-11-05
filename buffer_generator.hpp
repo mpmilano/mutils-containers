@@ -148,10 +148,12 @@ namespace mutils{
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
 		assert(payload_end - payload <= (int)buf_size);
+#ifndef NDEBUG
 		if (offset > size()){
 			std::cout << offset << std::endl;
 			std::cout << size() << std::endl;
 		}
+#endif
 		assert(offset <= size());
 		auto ret = pointer{backing_buffer,payload+offset,payload_end};
 		payload_end = payload + offset;
