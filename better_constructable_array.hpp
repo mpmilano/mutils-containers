@@ -38,6 +38,7 @@ namespace mutils{
 		inline auto& operator[](std::size_t i){
 			if (i == 0) return one;
 			else assert(false && "error: index out of bounds");
+			struct dead_code{}; throw dead_code{};
 		}
 	};
 };
