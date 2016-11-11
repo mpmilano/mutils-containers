@@ -1,5 +1,5 @@
 #pragma once
-#include <map>
+#include <unordered_map>
 #include <shared_mutex>
 
 namespace mutils{
@@ -7,7 +7,7 @@ namespace mutils{
 	template<typename... A>
 	class SimpleConcurrentMap{
 
-		std::map<A...> map;
+		std::unordered_map<A...> map;
 		mutable std::shared_mutex mut;
 		using slock_t = std::shared_lock<std::shared_mutex>;
 		using ulock_t = std::unique_lock<std::shared_mutex>;
