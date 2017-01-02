@@ -1,8 +1,36 @@
 #pragma once
 #include <atomic>
 
+enum class backingLog {vector, list};
+
+template<typename T,backingLog>
+class InfiniteLog;
+
 template<typename T>
-class InfiniteLog {
+class InfiniteLog<T,backingLog::list> {
+	struct cons_cell {
+		T elem;
+		std::unique_ptr<cons_cell> prev;
+	};
+
+	using cons_p = std::unique_ptr<cons_cell>;
+
+	std::atomic<cons_p> current;
+
+	T& append(T elem){
+		cons_p _current;
+		while (!_current){
+			_current = current.exchange(cons_p{});
+			if (_current){
+				current.store(cons_p{new cons_cell(std::move(elem),std::move(_current))});
+				break;
+			}
+		}
+	}
+};
+
+template<typename T>
+class InfiniteLog<T,backingLog::vector> {
 
 	using T_p = std::unique_ptr<T>;
 	
