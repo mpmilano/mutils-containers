@@ -16,7 +16,8 @@ class InfiniteLog<T,backingLog::list> {
 	using cons_p = std::unique_ptr<cons_cell>;
 
 	std::atomic<cons_p> current;
-
+public:
+	
 	T& append(T elem){
 		cons_p _current;
 		while (!_current){
@@ -26,6 +27,22 @@ class InfiniteLog<T,backingLog::list> {
 				break;
 			}
 		}
+	}
+
+	T& last(std::size_t n = 0){
+		cons_cell* cand{current.load().get()};
+		for (;n != 0;--n){
+			cons_cell = cand->prev.get();
+		}
+		return cand->elem;
+	}
+
+	auto collect(std::size_t threshold){
+		cons_cell* cand{current.load().get()};
+		for (;n != 0;--n){
+			cons_cell = cand->prev.get();
+		}
+		retrun std::move(cand->prev);
 	}
 };
 
