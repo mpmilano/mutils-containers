@@ -161,6 +161,15 @@ namespace mutils{
 				normalized_emplace(this->impl,args()...);
 			return pop_common();
 		}
+
+		T pop_blocking(){
+			lock l{this->m}; discard(l);
+			if (this->impl.size() == 0) {
+				this->cv.wait(l,[&](){return this->impl.size() > 0;});
+			}
+			return this->pop_common();
+		}
+		
 	};
 
 	template<typename T, class Collection = std::list<T> >
@@ -170,13 +179,8 @@ namespace mutils{
 			:InterimSafeSet<T,Collection>(max_size){}
 		
 		using lock = typename MonotoneSafeSet<T>::lock;
-		T pop(){
-			lock l{this->m}; discard(l);
-			if (this->impl.size() == 0) {
-				this->cv.wait(l,[&](){return this->impl.size() > 0;});
-			}
-			return this->pop_common();
-		}
+		auto pop() { return this->pop_blocking(); }
+		
 	};
 
 	template<typename T, class Collection>
