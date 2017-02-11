@@ -1,6 +1,7 @@
 #pragma once
 #include <type_traits>
 #include <vector>
+#include <cassert>
 
 namespace mutils{
 
@@ -42,11 +43,11 @@ namespace mutils{
 		template<typename F> void for_each(const F& fun){
 			auto mapped_fun = [&](auto* kind_map_entry){
 				typename std::decay_t<decltype(*kind_map_entry)>::type* key{nullptr};
-				return fun(key,kind_map_entry->v);
+				fun(key,kind_map_entry->v);
 				return true;
 			};
 			auto lst = {true,true,mapped_fun((kind_map::kind_map_entry<Types,Value>*) this)...};
-			assert(std::vector<bool>{lst}.size() > 0);
+			(void)lst;
 		}
 	};
 }

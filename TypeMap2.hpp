@@ -1,4 +1,5 @@
 #pragma once
+#include <type_traits>
 
 namespace mutils{
 
@@ -8,6 +9,7 @@ namespace mutils{
 		template<typename Type, typename Value>
 		struct type_map_entry{
 			Value v;
+			using type = Type;
 		};
 
 		template<typename...> struct find_entry;
@@ -35,5 +37,16 @@ namespace mutils{
 			T *key{nullptr};
 			return type_map::find_entry<type_map::type_map_entry<Types, Value>...>::get_entry(*this,key);
 		};
+
+		template<typename F> void for_each(const F& fun){
+			auto mapped_fun = [&](auto* type_map_entry){
+				typename std::decay_t<decltype(*type_map_entry)>::type* key{nullptr};
+				fun(key,type_map_entry->v);
+				return true;
+			};
+			auto lst = {true,true,mapped_fun((type_map::type_map_entry<Types,Value>*) this)...};
+			(void)lst;
+		}
+		
 	};
 }
