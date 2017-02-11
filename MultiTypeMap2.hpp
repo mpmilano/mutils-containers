@@ -2,8 +2,6 @@
 #include <map>
 
 namespace mutils{
-
-
 	namespace mtype_map{
 	
 		template<typename Type, typename Key>
