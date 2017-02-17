@@ -50,4 +50,9 @@ namespace mutils{
 			(void)lst;
 		}
 	};
+
+	template<template<class> class Value>
+	struct KindMap<Value> {
+		template<typename F> void for_each(const F& ){}
+	};
 }
