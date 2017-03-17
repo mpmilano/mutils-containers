@@ -15,9 +15,7 @@ namespace mutils{
 		template<typename...> struct find_entry;
 		
 		template<> struct find_entry<>{
-			static void * get_entry(){
-				return nullptr;
-			}
+			static void get_entry(){}
 		};
 		
 		template<typename Type, typename Value, typename... Other>
