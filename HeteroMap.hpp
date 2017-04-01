@@ -5,7 +5,10 @@
 
 namespace mutils {
 
-	template<typename Key>
+	template<typename T>
+	using unique_ptr_alias = std::unique_ptr<T> 
+	
+		template<typename Key, template<typename> class ptr = unique_ptr_alias>
 	struct HeteroMap {
 	private:
 		
@@ -13,7 +16,7 @@ namespace mutils {
 		using count = std::function<int (Key)>;
 		using destructor = std::function<void ()>;
 		template<typename T>
-		using submap = std::map<Key, std::unique_ptr<std::decay_t<T> > >;
+		using submap = std::map<Key, ptr<std::decay_t<T> > >;
 		
 		std::map<type_id, std::tuple<void*, count, destructor,std::string> > sub_maps;
 		std::map<Key,type_id> member_set; //for membership queries, when we do not know the type
