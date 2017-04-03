@@ -7,8 +7,15 @@ namespace mutils{
 	template<typename T, std::size_t s, bool b, typename... Ctrarg>
 	struct _array;
 
+	template<typename>
+	struct empty_array {
+		static empty_array rest;
+	};
+	template<typename T>
+	empty_array<T> empty_array<T>::rest;
+	
 	template<typename T, std::size_t s, typename... Ctrarg>
-	using array = _array<T,s,(s > 1),Ctrarg...>;
+	using array = std::conditional_t<(s > 0), _array<T,s,(s > 1),Ctrarg...>, empty_array<T> >;
 	
 	template<typename T, std::size_t s, typename... Ctrarg>
 	struct _array<T,s,true,Ctrarg...>{
@@ -29,8 +36,9 @@ namespace mutils{
 
 	template<typename T, std::size_t s, typename... Ctrarg>
 	struct _array<T,s,false, Ctrarg...>{
-
 		T one;
+		empty_array<T> rest;
+		
 		_array(Ctrarg && ...t2)
 			:one(std::forward<Ctrarg>(t2)...)
 			{}
