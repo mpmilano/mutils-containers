@@ -24,7 +24,7 @@ namespace mutils{
 		array<T,s-1,Ctrarg...> rest;
 
 		template<typename... T2>
-		_array(Ctrarg && ... t1, T2 && ...t2)
+		_array(Ctrarg ... t1, T2 && ...t2)
 			:one(std::forward<Ctrarg>(t1)...),
 			 rest(std::forward<T2>(t2)...){}
 		
@@ -39,7 +39,7 @@ namespace mutils{
 		T one;
 		empty_array<T> rest;
 		
-		_array(Ctrarg && ...t2)
+		_array(Ctrarg ...t2)
 			:one(std::forward<Ctrarg>(t2)...)
 			{}
 		
