@@ -6,9 +6,9 @@
 namespace mutils {
 
 	template<typename T>
-	using unique_ptr_alias = std::unique_ptr<T> 
+	using unique_ptr_alias = std::unique_ptr<T> ;
 	
-		template<typename Key, template<typename> class ptr = unique_ptr_alias>
+	template<typename Key, template<typename> class ptr = unique_ptr_alias>
 	struct HeteroMap {
 	private:
 		
