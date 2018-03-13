@@ -40,7 +40,7 @@ namespace mutils {
 		}
 		
 		template<typename T>
-		submap<std::decay_t<T> > const * const get_submap() const {
+		const submap<std::decay_t<T> > * get_submap() const {
 			return (submap<T>*) std::get<0>(sub_maps.at(get_type_id<std::decay_t<T> >()));
 		}
 	public:
