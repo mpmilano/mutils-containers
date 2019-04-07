@@ -1,1 +1,1 @@
-set(mutils_container_INCLUDE_DIRS "${PREFIX}/include")
+set(mutils-containers_INCLUDE_DIRS "${CMAKE_INSTALL_PREFIX}/include")
