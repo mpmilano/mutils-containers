@@ -1,6 +1,6 @@
-#include "TypeMap2.hpp"
-#include "KindMap.hpp"
-#include "MultiTypeMap2.hpp"
+#include "mutils-containers/TypeMap2.hpp"
+#include "mutils-containers/KindMap.hpp"
+#include "mutils-containers/MultiTypeMap2.hpp"
 #include <list>
 #include <cassert>
 #include <iostream>

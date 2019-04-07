@@ -3,6 +3,11 @@
 #include <cassert>
 #include <atomic>
 #include <string.h>
+#include <mutex>
+
+#ifndef NDEBUG
+#include <iostream>
+#endif
 
 namespace mutils{
 
