@@ -16,9 +16,9 @@ if(NOT ${mutils_FOUND})
 endif(NOT ${mutils_FOUND})
 
 add_library(mutils-containers INTERFACE)
-target_include_directories(mutils-containers INTERFACE $<INSTALL_INTERFACE:include/mutils-container>)
 
 #Testers
+include_directories(${mutils-containers_SOURCE_DIR}/include)
 add_executable(test_buffer_generator test_buffer_generator.cpp)
 add_executable(test_multitype_map test_multitype_map.cpp)
 add_executable(test_type_map test_type_map.cpp)
@@ -28,9 +28,7 @@ target_link_libraries(test_multitype_map ${mutils_LIBRARIES})
 install(DIRECTORY include/mutils-containers
   DESTINATION include)
 install(TARGETS mutils-containers EXPORT mutils-containers
-  LIBRARY DESTINATION lib
-  PUBLIC_HEADER DESTINATION include
-)
+  LIBRARY DESTINATION lib)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
