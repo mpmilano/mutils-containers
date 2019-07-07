@@ -28,7 +28,7 @@ target_link_libraries(test_multitype_map ${mutils_LIBRARIES})
 install(DIRECTORY include/mutils-containers
   DESTINATION include)
 install(TARGETS mutils-containers EXPORT mutils-containers
-  LIBRARY DESTINATION lib)
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
