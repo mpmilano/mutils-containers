@@ -5,7 +5,7 @@
 #include <string.h>
 #include <mutex>
 
-#ifndef NDEBUG
+#ifdef MUTILS_DEBUG
 #include <iostream>
 #endif
 
@@ -153,7 +153,7 @@ namespace mutils{
 	template<std::size_t buf_size>
 	typename BufferGenerator<buf_size>::pointer BufferGenerator<buf_size>::pointer::split(std::size_t offset){
 		assert(payload_end - payload <= (int)buf_size);
-#ifndef NDEBUG
+#ifdef MUTILS_DEBUG
 		if (offset > size()){
 			std::cout << offset << std::endl;
 			std::cout << size() << std::endl;
